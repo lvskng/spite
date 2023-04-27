@@ -3,7 +3,17 @@ const passport = require("passport");
 const saml = require("passport-saml");
 const fs = require("fs");
 
+
+var g_profile;
 app = express();
+
+passport.serializeUser(function (user, done) {
+    done(null, user);
+  });
+
+passport.deserializeUser(function (user, done) {
+done(null, user);
+});
 
 const samlStrategy = new saml.Strategy(
     {
@@ -15,11 +25,13 @@ const samlStrategy = new saml.Strategy(
         authnContext: "http://schemas.microsoft.com/ws/2008/06/identity/authenticationmethod/windows"
     },
         function(profile, done) {
-        return done(null, profile);
-    }
+            g_profile = profile;
+            done(null, profile);
+    },
+
 );
 
-passport.use("samlStrategy", samlStrategy);
+passport.use("samlStrategy", [samlStrategy]);
 
 app.route("/metadata").get(function(req, res) {
     res.type("application/xml");
@@ -34,23 +46,22 @@ app.route("/metadata").get(function(req, res) {
 const samlCallback = function(passport) {
     return function(req, res, next) {
         passport.authenticate("samlStrategy", function(err, user, info) {
+            res.send("" + err + user + info + g_profile + req.user);
 
-            const email = user.email;
-
-            req.login(user, function(err) {
-                return res.send('Hallo,' + email);
-            });
-
-        })(req, res, next);
+        }(req, res, next));
 
     };
 };
 
-app.route("/login-idp").get(passport.authenticate("samlStrategy"));
+app.route("/login-idp").get((req, res, next) => {
+    passport.authenticate("samlStrategy", function(err, user, info){}(req, res, next));
+});
 app.route("/login-idp/callback").post(samlCallback(passport));
 
 const baseURL = "spite.cfapps.eu10.hana.ondemand.com";
 const port = process.env.PORT || 3000;
+
+app.use(passport.initialize());
 
 app.listen(port, function () {
     console.log('spite app listening on port ' + port);
