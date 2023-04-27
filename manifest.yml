@@ -1,0 +1,7 @@
+---
+applications:
+- name: spite
+  memory: 192M
+  instances: 1
+  random-route: false
+  host: saml-demo
